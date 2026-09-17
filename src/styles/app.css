@@ -41,7 +41,7 @@ body {
 
 .task {
   display: flex;
-  gap: 10px;
+  gap: 7px;
   align-items: center;
   min-height: 30px;
   padding: 5px 16px;

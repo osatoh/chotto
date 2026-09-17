@@ -48,7 +48,8 @@ pnpm build        # typecheck + build the frontend
 ```
 
 Global shortcut: `⌘⇧Space` toggles the popup.
-In-app keys: `↑↓` select / `Enter` add or toggle / `⌘↑↓` reorder / `⌘⌫` delete / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Tab` `⇧Tab` indent / `Esc` hide.
+In-app keys: `↑↓` select / `Enter` add or toggle / `⌘↑↓` reorder / `⌘⌫` delete / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Tab` `⇧Tab` indent / `⌘E` rename / `Esc` hide.
+Clicking a task title also starts renaming it.
 
 `⌘,` opens the settings panel, which is also where the full shortcut list lives.
 

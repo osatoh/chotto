@@ -5,6 +5,7 @@ import {
   addTask,
   deleteTask,
   listTasks,
+  renameTask,
   setIndent,
   swapPositions,
   toggleTask,
@@ -49,6 +50,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draftIndent, setDraftIndent] = useState(0);
+  const [editing, setEditing] = useState<{ id: number; title: string } | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const t = messages(locale);
 
@@ -95,6 +99,18 @@ export default function App() {
 
     const meta = event.metaKey;
     const current = tasks[selected];
+
+    // While a task is being renamed the edit field owns every key but these
+    if (editing) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        await commitEdit();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        setEditing(null);
+      }
+      return;
+    }
 
     switch (event.key) {
       case ",":
@@ -182,6 +198,13 @@ export default function App() {
         }
         return;
 
+      case "e":
+        if (meta && current) {
+          event.preventDefault();
+          setEditing({ id: current.id, title: current.title });
+        }
+        return;
+
       case "p":
         if (meta) {
           event.preventDefault();
@@ -204,6 +227,16 @@ export default function App() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
+
+  const commitEdit = async () => {
+    if (!editing) return;
+    const title = editing.title.trim();
+    setEditing(null);
+    // An emptied title is a cancel, not a delete
+    if (!title) return;
+    await renameTask(editing.id, title);
+    await reload();
+  };
 
   const toggleSelected = (task: Task) => {
     void toggleTask(task.id, !task.done)
@@ -275,9 +308,24 @@ export default function App() {
                 className={`checkbox${task.done ? " checkbox--checked" : ""}`}
                 onClick={() => toggleSelected(task)}
               />
-              <span className={task.done ? "task__title--done" : undefined}>
-                {task.title}
-              </span>
+              {editing?.id === task.id ? (
+                <input
+                  className="task__input"
+                  value={editing.title}
+                  autoFocus
+                  onChange={(event) =>
+                    setEditing({ id: task.id, title: event.target.value })
+                  }
+                  onBlur={() => void commitEdit().catch((cause) => setError(String(cause)))}
+                />
+              ) : (
+                <span
+                  className={`task__title${task.done ? " task__title--done" : ""}`}
+                  onClick={() => setEditing({ id: task.id, title: task.title })}
+                >
+                  {task.title}
+                </span>
+              )}
             </li>
           ))}
 

@@ -174,3 +174,8 @@ body {
   font-size: 12px;
   cursor: pointer;
 }
+
+.task__title {
+  flex: 1;
+  cursor: text;
+}

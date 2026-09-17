@@ -43,6 +43,13 @@ export async function setIndent(id: number, indent: number): Promise<void> {
   );
 }
 
+export async function renameTask(id: number, title: string): Promise<void> {
+  await (await db()).execute(
+    "UPDATE tasks SET title = $1, updated_at = datetime('now') WHERE id = $2",
+    [title, id],
+  );
+}
+
 export async function toggleTask(id: number, done: boolean): Promise<void> {
   await (await db()).execute(
     "UPDATE tasks SET done = $1, updated_at = datetime('now') WHERE id = $2",

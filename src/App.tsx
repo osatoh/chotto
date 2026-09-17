@@ -89,9 +89,9 @@ export default function App() {
     await invoke("set_pinned", { pinned: pin });
   };
 
-  const runKeyDown = async (event: React.KeyboardEvent) => {
+  const runKeyDown = async (event: KeyboardEvent) => {
     // While the IME is composing, Enter confirms the conversion — not a task
-    if (event.nativeEvent.isComposing) return;
+    if (event.isComposing) return;
 
     const meta = event.metaKey;
     const current = tasks[selected];
@@ -191,12 +191,19 @@ export default function App() {
     }
   };
 
-  // Nothing else reports failures, so a swallowed rejection would look like
-  // a key that simply does nothing
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    setError(null);
-    void runKeyDown(event).catch((cause) => setError(String(cause)));
-  };
+  // Listen on the window, not on the popup: the settings panel has nothing
+  // focusable, so a handler on an element would never see Esc there.
+  // Re-registered on every render so the handler always reads fresh state.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Nothing else reports failures, so a swallowed rejection would look
+      // like a key that simply does nothing
+      setError(null);
+      void runKeyDown(event).catch((cause) => setError(String(cause)));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   const toggleSelected = (task: Task) => {
     void toggleTask(task.id, !task.done)
@@ -205,10 +212,19 @@ export default function App() {
   };
 
   return (
-    <div className="popup" onKeyDown={handleKeyDown}>
+    <div className="popup">
       {settingsOpen ? (
         <div className="settings">
-          <h1 className="settings__title">{t.settings}</h1>
+          <header className="settings__header">
+            <h1 className="settings__title">{t.settings}</h1>
+            <button
+              type="button"
+              className="settings__close"
+              onClick={() => setSettingsOpen(false)}
+            >
+              {t.close}
+            </button>
+          </header>
 
           <button
             type="button"

@@ -5,6 +5,7 @@ export type Locale = (typeof LOCALES)[number];
 type Messages = {
   inputPlaceholder: string;
   settings: string;
+  close: string;
   theme: string;
   language: string;
   pin: string;
@@ -19,6 +20,7 @@ const MESSAGES: Record<Locale, Messages> = {
   en: {
     inputPlaceholder: "Capture a task…",
     settings: "Settings",
+    close: "Done (Esc)",
     theme: "Theme",
     language: "Language",
     pin: "Keep on top",
@@ -31,16 +33,18 @@ const MESSAGES: Record<Locale, Messages> = {
       { keys: "↑ ↓", description: "Move the selection" },
       { keys: "⌘↑ ⌘↓", description: "Reorder the selected task" },
       { keys: "⌘⌫", description: "Delete the selected task" },
+      { keys: "Tab ⇧Tab", description: "Indent or outdent" },
       { keys: "⌘K", description: "Next theme" },
       { keys: "⌘L", description: "Next language" },
       { keys: "⌘P", description: "Keep on top" },
       { keys: "⌘,", description: "Settings" },
-      { keys: "Esc", description: "Hide" },
+      { keys: "Esc", description: "Close settings, or hide chotto" },
     ],
   },
   ja: {
     inputPlaceholder: "ちょっとメモ…",
     settings: "設定",
+    close: "閉じる (Esc)",
     theme: "テーマ",
     language: "言語",
     pin: "常に手前に表示",
@@ -53,11 +57,12 @@ const MESSAGES: Record<Locale, Messages> = {
       { keys: "↑ ↓", description: "選択を移動" },
       { keys: "⌘↑ ⌘↓", description: "選択中のタスクを並び替え" },
       { keys: "⌘⌫", description: "選択中のタスクを削除" },
+      { keys: "Tab ⇧Tab", description: "インデントを下げる / 上げる" },
       { keys: "⌘K", description: "次のテーマ" },
       { keys: "⌘L", description: "次の言語" },
       { keys: "⌘P", description: "常に手前に表示" },
       { keys: "⌘,", description: "設定" },
-      { keys: "Esc", description: "隠す" },
+      { keys: "Esc", description: "設定を閉じる / chotto を隠す" },
     ],
   },
 };

@@ -74,10 +74,6 @@ body {
   content: "✓";
 }
 
-.task--draft .checkbox {
-  cursor: default;
-}
-
 .task__input {
   flex: 1;
   border: none;
@@ -91,7 +87,7 @@ body {
   color: var(--text-muted);
 }
 
-.task__title--done {
+.task__input--done {
   color: var(--text-muted);
   text-decoration: line-through;
 }
@@ -173,9 +169,4 @@ body {
   font: inherit;
   font-size: 12px;
   cursor: pointer;
-}
-
-.task__title {
-  flex: 1;
-  cursor: text;
 }

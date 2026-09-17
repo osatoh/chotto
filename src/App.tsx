@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import {
-  addTask,
+  createTask,
   deleteTask,
   listTasks,
   renameTask,
@@ -31,38 +31,59 @@ function loadTheme(): Theme {
   return THEMES.includes(saved as Theme) ? (saved as Theme) : "flexoki-light";
 }
 
+function next<T>(values: readonly T[], current: T): T {
+  return values[(values.indexOf(current) + 1) % values.length];
+}
+
 /** A line may sit at most one level deeper than the line above it */
 function maxIndent(previous: Task | undefined): number {
   return previous ? previous.indent + 1 : 0;
 }
 
-function next<T>(values: readonly T[], current: T): T {
-  return values[(values.indexOf(current) + 1) % values.length];
+/** Position for a line inserted between two others; REAL leaves room forever */
+function positionBetween(before: Task, after: Task | undefined): number {
+  return after ? (before.position + after.position) / 2 : before.position + 1;
 }
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [draft, setDraft] = useState("");
-  const [selected, setSelected] = useState(0);
+  const [focused, setFocused] = useState<number | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme);
   const [pinned, setPinned] = useState(false);
   const [locale, setLocale] = useState<Locale>(loadLocale);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [draftIndent, setDraftIndent] = useState(0);
-  const [editing, setEditing] = useState<{ id: number; title: string } | null>(
-    null,
-  );
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputs = useRef(new Map<number, HTMLInputElement>());
   const t = messages(locale);
 
-  const reload = useCallback(async () => {
-    setTasks(await listTasks());
+  const report = (cause: unknown) => setError(String(cause));
+
+  /** Put the caret at the end of a line once it has been rendered */
+  const focusLine = useCallback((id: number) => {
+    setFocused(id);
+    requestAnimationFrame(() => {
+      const input = inputs.current.get(id);
+      if (!input) return;
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
   }, []);
 
+  // chotto is never empty: an empty list still shows one line to type on
+  const load = useCallback(async () => {
+    const loaded = await listTasks();
+    if (loaded.length > 0) {
+      setTasks(loaded);
+      return;
+    }
+    const id = await createTask(1, 0);
+    setTasks(await listTasks());
+    focusLine(id);
+  }, [focusLine]);
+
   useEffect(() => {
-    void reload().catch((cause) => setError(String(cause)));
-  }, [reload]);
+    void load().catch(report);
+  }, [load]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -74,18 +95,16 @@ export default function App() {
     saveLocale(locale);
   }, [locale]);
 
-  // Return focus to the input every time the popup is shown again
+  // Return to the line that was being typed every time the popup comes back
   useEffect(() => {
-    const unlisten = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-      if (focused) inputRef.current?.focus();
+    const unlisten = getCurrentWindow().onFocusChanged(({ payload: shown }) => {
+      const id = focused ?? tasks[0]?.id;
+      if (shown && id !== undefined) focusLine(id);
     });
     return () => {
       void unlisten.then((fn) => fn());
     };
-  }, []);
-
-  const clampSelection = (index: number) =>
-    Math.max(0, Math.min(index, tasks.length - 1));
+  }, [focused, tasks, focusLine]);
 
   const togglePin = async () => {
     const pin = !pinned;
@@ -93,98 +112,121 @@ export default function App() {
     await invoke("set_pinned", { pinned: pin });
   };
 
+  const changeTitle = (task: Task, title: string) => {
+    setTasks((all) =>
+      all.map((one) => (one.id === task.id ? { ...one, title } : one)),
+    );
+    void renameTask(task.id, title).catch(report);
+  };
+
+  const toggle = (task: Task) => {
+    setTasks((all) =>
+      all.map((one) => (one.id === task.id ? { ...one, done: !one.done } : one)),
+    );
+    void toggleTask(task.id, !task.done).catch(report);
+  };
+
+  /** Remove a line, keeping the last one as an empty line to type on */
+  const removeLine = async (index: number) => {
+    const task = tasks[index];
+    if (tasks.length === 1) {
+      changeTitle(task, "");
+      return;
+    }
+    await deleteTask(task.id);
+    const neighbour = tasks[index - 1] ?? tasks[index + 1];
+    setTasks(tasks.filter((_, at) => at !== index));
+    focusLine(neighbour.id);
+  };
+
   const runKeyDown = async (event: KeyboardEvent) => {
-    // While the IME is composing, Enter confirms the conversion — not a task
+    // While the IME is composing, Enter confirms the conversion — not a line
     if (event.isComposing) return;
 
     const meta = event.metaKey;
-    const current = tasks[selected];
 
-    // While a task is being renamed the edit field owns every key but these
-    if (editing) {
-      if (event.key === "Enter") {
+    if (settingsOpen) {
+      if (event.key === "Escape" || (meta && event.key === ",")) {
         event.preventDefault();
-        await commitEdit();
-        // Leaving the edit field focusless would strand the caret
-        inputRef.current?.focus();
-      } else if (event.key === "Escape") {
-        event.preventDefault();
-        setEditing(null);
-        inputRef.current?.focus();
+        setSettingsOpen(false);
       }
       return;
     }
+
+    const index = tasks.findIndex((task) => task.id === focused);
+    const current = tasks[index];
 
     switch (event.key) {
       case ",":
         if (meta) {
           event.preventDefault();
-          setSettingsOpen((open) => !open);
+          setSettingsOpen(true);
         }
         return;
 
       case "Escape":
         event.preventDefault();
-        // Esc closes the settings panel first, then hides the window
-        if (settingsOpen) {
-          setSettingsOpen(false);
-        } else {
-          await getCurrentWindow().hide();
+        await getCurrentWindow().hide();
+        return;
+
+      case "Enter": {
+        event.preventDefault();
+        if (!current) return;
+        if (meta) {
+          toggle(current);
+          return;
+        }
+        const id = await createTask(
+          positionBetween(current, tasks[index + 1]),
+          current.indent,
+        );
+        setTasks(await listTasks());
+        focusLine(id);
+        return;
+      }
+
+      case "Backspace": {
+        if (!current) return;
+        // ⌘⌫ deletes outright; a bare ⌫ only collapses an empty line
+        const caretAtStart =
+          (event.target as HTMLInputElement).selectionStart === 0;
+        if (meta || (caretAtStart && !current.title)) {
+          event.preventDefault();
+          await removeLine(index);
         }
         return;
+      }
 
       case "ArrowDown":
       case "ArrowUp": {
         event.preventDefault();
-        const delta = event.key === "ArrowDown" ? 1 : -1;
-        const target = clampSelection(selected + delta);
-        // ⌘↑↓ reorders the selected task
-        if (meta && current && target !== selected) {
+        if (!current) return;
+        const step = event.key === "ArrowDown" ? 1 : -1;
+        const target = Math.max(0, Math.min(index + step, tasks.length - 1));
+        if (target === index) return;
+        if (meta) {
           await swapPositions(current, tasks[target]);
-          await reload();
+          setTasks(await listTasks());
         }
-        setSelected(target);
+        focusLine(tasks[target].id);
         return;
       }
 
       case "Tab": {
-        // Tab indents the line being typed, or the selected task when idle
         event.preventDefault();
-        const step = event.shiftKey ? -1 : 1;
-        if (draft) {
-          const limit = maxIndent(tasks[tasks.length - 1]);
-          setDraftIndent(Math.max(0, Math.min(draftIndent + step, limit)));
-        } else if (current) {
-          const limit = maxIndent(tasks[selected - 1]);
-          const indent = Math.max(0, Math.min(current.indent + step, limit));
-          if (indent !== current.indent) {
-            await setIndent(current.id, indent);
-            await reload();
-          }
-        }
+        if (!current) return;
+        const limit = maxIndent(tasks[index - 1]);
+        const indent = Math.max(
+          0,
+          Math.min(current.indent + (event.shiftKey ? -1 : 1), limit),
+        );
+        if (indent === current.indent) return;
+        await setIndent(current.id, indent);
+        setTasks((all) =>
+          all.map((one) => (one.id === current.id ? { ...one, indent } : one)),
+        );
         return;
       }
-
-      case "Enter":
-        event.preventDefault();
-        if (draft.trim()) {
-          await addTask(draft.trim(), draftIndent);
-          setDraft("");
-          await reload();
-        } else if (current) {
-          await toggleTask(current.id, !current.done);
-          await reload();
-        }
-        return;
-
-      case "Backspace":
-        if (meta && current) {
-          event.preventDefault();
-          await deleteTask(current.id);
-          setSelected(clampSelection(selected - 1));
-          await reload();
-        }
-        return;
 
       case "k":
         if (meta) {
@@ -198,13 +240,6 @@ export default function App() {
         if (meta) {
           event.preventDefault();
           setLocale(next(LOCALES, locale));
-        }
-        return;
-
-      case "e":
-        if (meta && current) {
-          event.preventDefault();
-          setEditing({ id: current.id, title: current.title });
         }
         return;
 
@@ -225,27 +260,11 @@ export default function App() {
       // Nothing else reports failures, so a swallowed rejection would look
       // like a key that simply does nothing
       setError(null);
-      void runKeyDown(event).catch((cause) => setError(String(cause)));
+      void runKeyDown(event).catch(report);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
-
-  const commitEdit = async () => {
-    if (!editing) return;
-    const title = editing.title.trim();
-    setEditing(null);
-    // An emptied title is a cancel, not a delete
-    if (!title) return;
-    await renameTask(editing.id, title);
-    await reload();
-  };
-
-  const toggleSelected = (task: Task) => {
-    void toggleTask(task.id, !task.done)
-      .then(reload)
-      .catch((cause) => setError(String(cause)));
-  };
 
   return (
     <div className="popup" data-tauri-drag-region>
@@ -300,53 +319,29 @@ export default function App() {
         </div>
       ) : (
         <ul className="list" data-tauri-drag-region>
-          {tasks.map((task, index) => (
+          {tasks.map((task) => (
             <li
               key={task.id}
-              className={`task${index === selected ? " task--selected" : ""}`}
+              className="task"
               style={{ paddingLeft: `${16 + task.indent * 22}px` }}
-              onClick={() => setSelected(index)}
             >
               <span
                 className={`checkbox${task.done ? " checkbox--checked" : ""}`}
-                onClick={() => toggleSelected(task)}
+                onClick={() => toggle(task)}
               />
-              {editing?.id === task.id ? (
-                <input
-                  className="task__input"
-                  value={editing.title}
-                  autoFocus
-                  onChange={(event) =>
-                    setEditing({ id: task.id, title: event.target.value })
-                  }
-                  onBlur={() => void commitEdit().catch((cause) => setError(String(cause)))}
-                />
-              ) : (
-                <span
-                  className={`task__title${task.done ? " task__title--done" : ""}`}
-                  onClick={() => setEditing({ id: task.id, title: task.title })}
-                >
-                  {task.title}
-                </span>
-              )}
+              <input
+                ref={(input) => {
+                  if (input) inputs.current.set(task.id, input);
+                  else inputs.current.delete(task.id);
+                }}
+                className={`task__input${task.done ? " task__input--done" : ""}`}
+                value={task.title}
+                placeholder={tasks.length === 1 ? t.inputPlaceholder : ""}
+                onChange={(event) => changeTitle(task, event.target.value)}
+                onFocus={() => setFocused(task.id)}
+              />
             </li>
           ))}
-
-          {/* The last line is the input: a task starts as an empty checkbox */}
-          <li
-            className="task task--draft"
-            style={{ paddingLeft: `${16 + draftIndent * 22}px` }}
-          >
-            <span className="checkbox" />
-            <input
-              ref={inputRef}
-              className="task__input"
-              placeholder={t.inputPlaceholder}
-              value={draft}
-              autoFocus
-              onChange={(event) => setDraft(event.target.value)}
-            />
-          </li>
         </ul>
       )}
 

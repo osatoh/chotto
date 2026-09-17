@@ -20,8 +20,8 @@ A tiny, keyboard-first task app for macOS.
 - [ ] Instant capture: select text anywhere → shortcut → becomes a task
 - [ ] AI parsing: extract title / due / tags from captured text
 - [ ] Full keyboard operation
-  - `↑↓` move, `Space`/`Enter` toggle check, `⌘↑↓` reorder
-  - The last line is the input: type → `Enter` to add
+  - `↑↓` move between lines, `⌘Enter` toggle check, `⌘↑↓` move the line
+  - Every line is an editable field: `Enter` starts a new line below
   - `⌘K` command palette / theme switch, `⌘⌫` delete, `⌘,` settings
 - [x] Subtasks: `Tab` / `Shift+Tab` to indent
 - [x] UI language: English (default) / Japanese
@@ -48,8 +48,9 @@ pnpm build        # typecheck + build the frontend
 ```
 
 Global shortcut: `⌘⇧Space` toggles the popup.
-In-app keys: `↑↓` select / `Enter` add or toggle / `⌘↑↓` reorder / `⌘⌫` delete / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Tab` `⇧Tab` indent / `⌘E` rename / `Esc` hide.
-Clicking a task title also starts renaming it.
+In-app keys: `Enter` new line / `⌘Enter` check off / `↑↓` move between lines / `⌘↑↓` move the line / `⌫` remove an empty line / `⌘⌫` remove the line / `Tab` `⇧Tab` indent / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
+
+There is no separate input box: every line is an editable field, and chotto always keeps at least one line to type on.
 
 `⌘,` opens the settings panel, which is also where the full shortcut list lives.
 

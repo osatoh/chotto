@@ -245,9 +245,9 @@ export default function App() {
   };
 
   return (
-    <div className="popup">
+    <div className="popup" data-tauri-drag-region>
       {settingsOpen ? (
-        <div className="settings">
+        <div className="settings" data-tauri-drag-region>
           <header className="settings__header">
             <h1 className="settings__title">{t.settings}</h1>
             <button
@@ -296,7 +296,7 @@ export default function App() {
           </dl>
         </div>
       ) : (
-        <ul className="list">
+        <ul className="list" data-tauri-drag-region>
           {tasks.map((task, index) => (
             <li
               key={task.id}

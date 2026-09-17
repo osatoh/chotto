@@ -53,21 +53,28 @@ export default function App() {
   const [locale, setLocale] = useState<Locale>(loadLocale);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFocus, setPendingFocus] = useState<number | null>(null);
   const inputs = useRef(new Map<number, HTMLInputElement>());
   const t = messages(locale);
 
   const report = (cause: unknown) => setError(String(cause));
 
-  /** Put the caret at the end of a line once it has been rendered */
+  /** Ask for the caret to land at the end of a line */
   const focusLine = useCallback((id: number) => {
     setFocused(id);
-    requestAnimationFrame(() => {
-      const input = inputs.current.get(id);
-      if (!input) return;
-      input.focus();
-      input.setSelectionRange(input.value.length, input.value.length);
-    });
+    setPendingFocus(id);
   }, []);
+
+  // A line added by Enter has no input element until React commits it, so the
+  // caret is moved here rather than at the point the line is created
+  useEffect(() => {
+    if (pendingFocus === null) return;
+    const input = inputs.current.get(pendingFocus);
+    if (!input) return;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    setPendingFocus(null);
+  }, [pendingFocus, tasks]);
 
   // chotto is never empty: an empty list still shows one line to type on
   const load = useCallback(async () => {

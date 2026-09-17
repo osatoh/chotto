@@ -465,7 +465,7 @@ export default function App() {
           {tasks.map((task) => (
             <li
               key={task.id}
-              className="task"
+              className={`task${task.id === focused ? " task--focused" : ""}`}
               style={{ paddingLeft: `${16 + task.indent * 22}px` }}
             >
               <span

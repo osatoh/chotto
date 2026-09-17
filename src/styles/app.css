@@ -65,9 +65,10 @@ body {
   cursor: default;
 }
 
-.task--selected {
-  background: var(--bg-elevated);
-  box-shadow: inset 2px 0 0 var(--accent);
+/* The line the caret sits on. A tint of the accent rather than a border, so
+   the list still reads as one column of text */
+.task--focused {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .checkbox {

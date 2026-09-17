@@ -68,9 +68,14 @@ export async function deleteTask(id: number): Promise<void> {
   await (await db()).execute("DELETE FROM tasks WHERE id = $1", [id]);
 }
 
-/** Swap the position of two tasks to exchange their order */
-export async function swapPositions(a: Task, b: Task): Promise<void> {
+/**
+ * Write a whole new order. Moving a task moves everything indented under it,
+ * so the two ends of the list can change at once; renumbering all of them is
+ * simpler than reasoning about which positions still hold.
+ */
+export async function reorder(ids: number[]): Promise<void> {
   const conn = await db();
-  await conn.execute("UPDATE tasks SET position = $1 WHERE id = $2", [b.position, a.id]);
-  await conn.execute("UPDATE tasks SET position = $1 WHERE id = $2", [a.position, b.id]);
+  for (const [index, id] of ids.entries()) {
+    await conn.execute("UPDATE tasks SET position = $1 WHERE id = $2", [index + 1, id]);
+  }
 }

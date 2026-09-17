@@ -6,8 +6,8 @@ import {
   deleteTask,
   listTasks,
   renameTask,
+  reorder,
   setIndent,
-  swapPositions,
   toggleTask,
   type Task,
 } from "./lib/db";
@@ -51,6 +51,15 @@ function next<T>(values: readonly T[], current: T): T {
 /** A line may sit at most one level deeper than the line above it */
 function maxIndent(previous: Task | undefined): number {
   return previous ? previous.indent + 1 : 0;
+}
+
+/** A line together with everything indented under it */
+function blockOf(tasks: Task[], index: number): Task[] {
+  let end = index;
+  while (end + 1 < tasks.length && tasks[end + 1].indent > tasks[index].indent) {
+    end += 1;
+  }
+  return tasks.slice(index, end + 1);
 }
 
 /** Position for a line inserted between two others; REAL leaves room forever */
@@ -189,6 +198,51 @@ export default function App() {
     focusLine(neighbour.id);
   };
 
+  /** Move a line and its children past the neighbouring line and its children */
+  const moveBlock = async (index: number, direction: 1 | -1) => {
+    const block = blockOf(tasks, index);
+    const end = index + block.length - 1;
+    let order: Task[];
+
+    if (direction === 1) {
+      const after = end + 1;
+      if (after >= tasks.length) return;
+      const neighbour = blockOf(tasks, after);
+      order = [
+        ...tasks.slice(0, index),
+        ...neighbour,
+        ...block,
+        ...tasks.slice(after + neighbour.length),
+      ];
+    } else {
+      if (index === 0) return;
+      // The line above may be a child, so walk back to the top of its block
+      let start = index - 1;
+      while (start > 0 && tasks[start].indent > tasks[index].indent) start -= 1;
+      order = [
+        ...tasks.slice(0, start),
+        ...block,
+        ...tasks.slice(start, index),
+        ...tasks.slice(end + 1),
+      ];
+    }
+
+    await reorder(order.map((task) => task.id));
+
+    // The block can land where its depth no longer has a parent above it
+    const landed = order.findIndex((task) => task.id === block[0].id);
+    const over = block[0].indent - maxIndent(order[landed - 1]);
+    if (over > 0) {
+      for (const task of block) {
+        await setIndent(task.id, Math.max(0, task.indent - over));
+      }
+    }
+
+    setTasks(await listTasks());
+    // The caret follows the line that moved, not the row it used to sit on
+    focusLine(block[0].id);
+  };
+
   const runKeyDown = async (event: KeyboardEvent) => {
     // While the IME is composing, Enter confirms the conversion — not a line.
     // keyCode 229 and the composing ref cover WKWebView, where compositionend
@@ -272,21 +326,21 @@ export default function App() {
         return;
 
       case "moveUp":
-      case "moveDown":
-      case "moveLineUp":
-      case "moveLineDown": {
+      case "moveDown": {
         event.preventDefault();
         if (!current) return;
-        const step = action === "moveDown" || action === "moveLineDown" ? 1 : -1;
+        const step = action === "moveDown" ? 1 : -1;
         const target = Math.max(0, Math.min(index + step, tasks.length - 1));
-        if (target === index) return;
-        if (action === "moveLineUp" || action === "moveLineDown") {
-          await swapPositions(current, tasks[target]);
-          setTasks(await listTasks());
-        }
-        focusLine(tasks[target].id);
+        if (target !== index) focusLine(tasks[target].id);
         return;
       }
+
+      case "moveLineUp":
+      case "moveLineDown":
+        event.preventDefault();
+        if (!current) return;
+        await moveBlock(index, action === "moveLineDown" ? 1 : -1);
+        return;
 
       case "indent":
       case "outdent": {

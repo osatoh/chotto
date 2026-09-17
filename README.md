@@ -19,10 +19,10 @@ A tiny, keyboard-first task app for macOS.
 - [x] Every line is a task with a checkbox
 - [ ] Instant capture: select text anywhere → shortcut → becomes a task
 - [ ] AI parsing: extract title / due / tags from captured text
-- [ ] Full keyboard operation
-  - `↑↓` move between lines, `⌘Enter` toggle check, `⌘↑↓` move the line
+- [x] Full keyboard operation
   - Every line is an editable field: `Enter` starts a new line below
-  - `⌘K` command palette / theme switch, `⌘⌫` delete, `⌘,` settings
+  - `↑↓` move between lines, `⌘Enter` checks off, `⌘↑↓` moves the line
+  - `⌘⌫` removes a line, `⌘K` switches theme, `⌘,` opens settings
 - [x] Subtasks: `Tab` / `Shift+Tab` to indent
 - [x] UI language: English (default) / Japanese
 - [x] Rebindable keys, including the global shortcut
@@ -30,6 +30,7 @@ A tiny, keyboard-first task app for macOS.
 - [x] Local storage (SQLite)
 
 ## Future Ideas
+- [ ] `⌘K` command palette (it only cycles themes today)
 - [ ] Voice capture
 - [ ] Completed-task handling options (strike / sink / fade out)
 - [ ] Homebrew tap distribution (requires Apple Developer signing)
@@ -42,11 +43,24 @@ A tiny, keyboard-first task app for macOS.
 - Claude API (task parsing)
 
 ## Development
+
+Needs [Rust](https://rustup.rs) and Node 20+ with pnpm; Xcode command line tools
+for the macOS build.
+
 ```sh
 pnpm install
-pnpm tauri dev    # run the app
-pnpm build        # typecheck + build the frontend
+pnpm tauri dev                  # run the app
+pnpm build                      # typecheck + build the frontend
+cd src-tauri && cargo check     # check the Rust shell
 ```
+
+Where things live:
+
+- `src/lib/db.ts` — every SQL statement chotto runs
+- `src/lib/keymap.ts` — actions, default bindings, chord parsing
+- `src/lib/i18n.ts` — every UI string, in both languages
+- `src/styles/themes.css` — a theme is a handful of CSS variables
+- `src-tauri/src/lib.rs` — window behaviour, global shortcut, migrations
 
 Global shortcut: `⌘⇧Space` toggles the popup.
 In-app keys: `Enter` new line / `⌘Enter` check off / `↑↓` move between lines / `⌘↑↓` move the line / `⌫` remove an empty line / `⌘⌫` remove the line / `Tab` `⇧Tab` indent / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
@@ -58,9 +72,13 @@ click a row, press the key you want, and it takes effect immediately. The
 bindings live in `localStorage` under `chotto.keymap`, and `⌘⇧Space` is rebound
 through the Rust side so the system hears the new one.
 
-UI language is English by default and can be switched to Japanese (`⌘L`, or the footer button); the choice is remembered. Strings live in `src/lib/i18n.ts`.
+UI language is English by default and can be switched to Japanese (`⌘L`, or the
+row in the settings panel); the choice is remembered.
 
-The database lives in the app data directory as `chotto.db`; the schema is managed by migrations in `src-tauri/src/lib.rs`.
+The database lives in the app data directory as `chotto.db`; the schema is
+managed by migrations in `src-tauri/src/lib.rs`. A task carries its order as a
+`REAL` position and its nesting as an `indent` depth, so reordering and
+indenting never fight each other.
 
 ## Design Decisions
 - Tauri over Electron: small binary, low memory — speed is the point
@@ -68,6 +86,7 @@ The database lives in the app data directory as `chotto.db`; the schema is manag
 - Popup-first UX: the app is hidden by default; capture without context switching
 - Every line is a checkbox: no headings, no rich text — this is a task list, not a notes app
 - Local-first: no server, no account; data stays on the machine
+- Fonts are bundled, not linked: chotto makes no network request at all
 
 ## Distribution
 - Phase 1: build locally for personal use (no Apple Developer account needed)

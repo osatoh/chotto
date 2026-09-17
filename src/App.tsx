@@ -55,6 +55,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [pendingFocus, setPendingFocus] = useState<number | null>(null);
   const inputs = useRef(new Map<number, HTMLInputElement>());
+  const composing = useRef(false);
+  const composedAt = useRef(0);
   const t = messages(locale);
 
   const report = (cause: unknown) => setError(String(cause));
@@ -147,8 +149,15 @@ export default function App() {
   };
 
   const runKeyDown = async (event: KeyboardEvent) => {
-    // While the IME is composing, Enter confirms the conversion — not a line
-    if (event.isComposing) return;
+    // While the IME is composing, Enter confirms the conversion — not a line.
+    // keyCode 229 and the composing ref cover WKWebView, where compositionend
+    // can arrive before the keydown that caused it and isComposing reads false.
+    if (event.isComposing || event.keyCode === 229 || composing.current) return;
+    // The Enter that confirms a conversion is released just after
+    // compositionend; treat that one as belonging to the IME too
+    if (event.key === "Enter" && performance.now() - composedAt.current < 50) {
+      return;
+    }
 
     const meta = event.metaKey;
 
@@ -258,6 +267,22 @@ export default function App() {
         return;
     }
   };
+
+  useEffect(() => {
+    const onStart = () => {
+      composing.current = true;
+    };
+    const onEnd = () => {
+      composing.current = false;
+      composedAt.current = performance.now();
+    };
+    window.addEventListener("compositionstart", onStart);
+    window.addEventListener("compositionend", onEnd);
+    return () => {
+      window.removeEventListener("compositionstart", onStart);
+      window.removeEventListener("compositionend", onEnd);
+    };
+  }, []);
 
   // Listen on the window, not on the popup: the settings panel has nothing
   // focusable, so a handler on an element would never see Esc there.

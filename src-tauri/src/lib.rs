@@ -7,6 +7,10 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 #[derive(Default)]
 struct Pinned(Mutex<bool>);
 
+/// Whether the window has held focus since it was last shown.
+#[derive(Default)]
+struct WasFocused(Mutex<bool>);
+
 #[tauri::command]
 fn set_pinned(pinned: bool, state: State<'_, Pinned>, window: tauri::Window) -> Result<(), String> {
     *state.0.lock().map_err(|e| e.to_string())? = pinned;
@@ -106,6 +110,14 @@ pub fn run() {
     #[cfg(desktop)]
     {
         builder = builder
+            // A second launch brings the running chotto forward. Without this
+            // the new process fights the old one for the global shortcut.
+            .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }))
             .plugin(tauri_plugin_global_shortcut::Builder::new().build())
             .manage(ToggleShortcut::default());
     }
@@ -118,19 +130,36 @@ pub fn run() {
         )
         .plugin(tauri_plugin_opener::init())
         .manage(Pinned::default())
+        .manage(WasFocused::default())
         .invoke_handler(tauri::generate_handler![set_pinned, set_global_shortcut])
         .on_window_event(|window, event| {
-            // Hide on focus loss, unless pinned
-            if let WindowEvent::Focused(false) = event {
-                let pinned = window
-                    .state::<Pinned>()
-                    .0
-                    .lock()
-                    .map(|v| *v)
-                    .unwrap_or(false);
-                if !pinned {
-                    let _ = window.hide();
+            let WindowEvent::Focused(focused) = event else {
+                return;
+            };
+            let was_focused = window.state::<WasFocused>();
+
+            if *focused {
+                if let Ok(mut held) = was_focused.0.lock() {
+                    *held = true;
                 }
+                return;
+            }
+
+            // Only hide a window that had focus: at launch the window is shown
+            // while another app is frontmost, and that arrives as a focus loss
+            // too, which would hide chotto before it was ever seen.
+            let held = match was_focused.0.lock() {
+                Ok(mut held) => std::mem::replace(&mut *held, false),
+                Err(_) => return,
+            };
+            let pinned = window
+                .state::<Pinned>()
+                .0
+                .lock()
+                .map(|v| *v)
+                .unwrap_or(false);
+            if held && !pinned {
+                let _ = window.hide();
             }
         })
         .setup(|app| {

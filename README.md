@@ -22,7 +22,7 @@ A tiny, keyboard-first task app for macOS.
 - [ ] Full keyboard operation
   - `↑↓` move, `Space`/`Enter` toggle check, `⌘↑↓` reorder
   - Input field always on top: type → `Enter` to add
-  - `⌘K` command palette / theme switch, `⌘⌫` delete
+  - `⌘K` command palette / theme switch, `⌘⌫` delete, `⌘,` settings
 - [x] UI language: English (default) / Japanese
 - [x] Themes: **flexoki-light (default)**, flexoki-dark, Dracula, Nord
 - [x] Local storage (SQLite)
@@ -48,7 +48,9 @@ pnpm build        # typecheck + build the frontend
 ```
 
 Global shortcut: `⌘⇧Space` toggles the popup.
-In-app keys: `↑↓` select / `Enter` add or toggle / `⌘↑↓` reorder / `⌘⌫` delete / `⌘K` theme / `⌘L` language / `⌘P` pin / `Esc` hide.
+In-app keys: `↑↓` select / `Enter` add or toggle / `⌘↑↓` reorder / `⌘⌫` delete / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
+
+`⌘,` opens the settings panel, which is also where the full shortcut list lives.
 
 UI language is English by default and can be switched to Japanese (`⌘L`, or the footer button); the choice is remembered. Strings live in `src/lib/i18n.ts`.
 

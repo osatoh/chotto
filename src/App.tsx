@@ -29,6 +29,10 @@ function loadTheme(): Theme {
   return THEMES.includes(saved as Theme) ? (saved as Theme) : "flexoki-light";
 }
 
+function next<T>(values: readonly T[], current: T): T {
+  return values[(values.indexOf(current) + 1) % values.length];
+}
+
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [draft, setDraft] = useState("");
@@ -36,6 +40,7 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(loadTheme);
   const [pinned, setPinned] = useState(false);
   const [locale, setLocale] = useState<Locale>(loadLocale);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const t = messages(locale);
 
@@ -71,9 +76,9 @@ export default function App() {
     Math.max(0, Math.min(index, tasks.length - 1));
 
   const togglePin = async () => {
-    const next = !pinned;
-    setPinned(next);
-    await invoke("set_pinned", { pinned: next });
+    const pin = !pinned;
+    setPinned(pin);
+    await invoke("set_pinned", { pinned: pin });
   };
 
   const handleKeyDown = async (event: React.KeyboardEvent) => {
@@ -81,22 +86,34 @@ export default function App() {
     const current = tasks[selected];
 
     switch (event.key) {
+      case ",":
+        if (meta) {
+          event.preventDefault();
+          setSettingsOpen((open) => !open);
+        }
+        return;
+
       case "Escape":
         event.preventDefault();
-        await getCurrentWindow().hide();
+        // Esc closes the settings panel first, then hides the window
+        if (settingsOpen) {
+          setSettingsOpen(false);
+        } else {
+          await getCurrentWindow().hide();
+        }
         return;
 
       case "ArrowDown":
       case "ArrowUp": {
         event.preventDefault();
         const delta = event.key === "ArrowDown" ? 1 : -1;
-        const next = clampSelection(selected + delta);
+        const target = clampSelection(selected + delta);
         // ⌘↑↓ reorders the selected task
-        if (meta && current && next !== selected) {
-          await swapPositions(current, tasks[next]);
+        if (meta && current && target !== selected) {
+          await swapPositions(current, tasks[target]);
           await reload();
         }
-        setSelected(next);
+        setSelected(target);
         return;
       }
 
@@ -125,15 +142,14 @@ export default function App() {
         if (meta) {
           // ⌘K: cycles themes for now (command palette comes later)
           event.preventDefault();
-          setTheme(THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]);
+          setTheme(next(THEMES, theme));
         }
         return;
 
       case "l":
         if (meta) {
-          // ⌘L: cycles the UI language (en / ja for now)
           event.preventDefault();
-          setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length]);
+          setLocale(next(LOCALES, locale));
         }
         return;
 
@@ -144,6 +160,11 @@ export default function App() {
         }
         return;
     }
+  };
+
+  const toggleSelected = async (task: Task) => {
+    await toggleTask(task.id, !task.done);
+    await reload();
   };
 
   return (
@@ -157,45 +178,71 @@ export default function App() {
         onChange={(event) => setDraft(event.target.value)}
       />
 
-      <ul className="list">
-        {tasks.length === 0 && (
-          <li className="list__empty">{t.empty}</li>
-        )}
-        {tasks.map((task, index) => (
-          <li
-            key={task.id}
-            className={`task${index === selected ? " task--selected" : ""}`}
-            onClick={() => setSelected(index)}
-          >
-            <span className="task__check">{task.done ? "✓" : ""}</span>
-            <span className={task.done ? "task__title--done" : undefined}>
-              {task.title}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {settingsOpen ? (
+        <div className="settings">
+          <h1 className="settings__title">{t.settings}</h1>
 
-      <footer className="footer">
-        <span>{t.hints}</span>
-        <span className="footer__actions">
           <button
             type="button"
-            className="footer__button"
-            onClick={() =>
-              setLocale(LOCALES[(LOCALES.indexOf(locale) + 1) % LOCALES.length])
-            }
+            className="settings__row"
+            onClick={() => setTheme(next(THEMES, theme))}
           >
-            {t.localeLabel}
+            <span>{t.theme}</span>
+            <span className="settings__value">{theme}</span>
           </button>
+
           <button
             type="button"
-            className={`footer__button${pinned ? " footer__button--on" : ""}`}
+            className="settings__row"
+            onClick={() => setLocale(next(LOCALES, locale))}
+          >
+            <span>{t.language}</span>
+            <span className="settings__value">{t.localeLabel}</span>
+          </button>
+
+          <button
+            type="button"
+            className="settings__row"
             onClick={() => void togglePin()}
           >
-            {pinned ? t.pinned : t.pin}
+            <span>{t.pin}</span>
+            <span className="settings__value">{pinned ? t.on : t.off}</span>
           </button>
-        </span>
-      </footer>
+
+          <dl className="shortcuts">
+            {t.shortcuts.map((shortcut) => (
+              <div className="shortcuts__row" key={shortcut.keys}>
+                <dt className="shortcuts__keys">{shortcut.keys}</dt>
+                <dd className="shortcuts__description">{shortcut.description}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : (
+        <ul className="list">
+          {tasks.length === 0 && (
+            // An empty checkbox reads better than an empty-state message
+            <li className="task task--placeholder">
+              <span className="checkbox" />
+            </li>
+          )}
+          {tasks.map((task, index) => (
+            <li
+              key={task.id}
+              className={`task${index === selected ? " task--selected" : ""}`}
+              onClick={() => setSelected(index)}
+            >
+              <span
+                className={`checkbox${task.done ? " checkbox--checked" : ""}`}
+                onClick={() => void toggleSelected(task)}
+              />
+              <span className={task.done ? "task__title--done" : undefined}>
+                {task.title}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

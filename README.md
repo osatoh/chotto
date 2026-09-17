@@ -21,7 +21,7 @@ A tiny, keyboard-first task app for macOS.
 - [ ] AI parsing: extract title / due / tags from captured text
 - [ ] Full keyboard operation
   - `↑↓` move, `Space`/`Enter` toggle check, `⌘↑↓` reorder
-  - Input field always on top: type → `Enter` to add
+  - The last line is the input: type → `Enter` to add
   - `⌘K` command palette / theme switch, `⌘⌫` delete, `⌘,` settings
 - [x] UI language: English (default) / Japanese
 - [x] Themes: **flexoki-light (default)**, flexoki-dark, Dracula, Nord

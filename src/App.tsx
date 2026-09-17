@@ -169,15 +169,6 @@ export default function App() {
 
   return (
     <div className="popup" onKeyDown={handleKeyDown}>
-      <input
-        ref={inputRef}
-        className="popup__input"
-        placeholder={t.inputPlaceholder}
-        value={draft}
-        autoFocus
-        onChange={(event) => setDraft(event.target.value)}
-      />
-
       {settingsOpen ? (
         <div className="settings">
           <h1 className="settings__title">{t.settings}</h1>
@@ -220,12 +211,6 @@ export default function App() {
         </div>
       ) : (
         <ul className="list">
-          {tasks.length === 0 && (
-            // An empty checkbox reads better than an empty-state message
-            <li className="task task--placeholder">
-              <span className="checkbox" />
-            </li>
-          )}
           {tasks.map((task, index) => (
             <li
               key={task.id}
@@ -241,6 +226,19 @@ export default function App() {
               </span>
             </li>
           ))}
+
+          {/* The last line is the input: a task starts as an empty checkbox */}
+          <li className="task task--draft">
+            <span className="checkbox" />
+            <input
+              ref={inputRef}
+              className="task__input"
+              placeholder={t.inputPlaceholder}
+              value={draft}
+              autoFocus
+              onChange={(event) => setDraft(event.target.value)}
+            />
+          </li>
         </ul>
       )}
     </div>

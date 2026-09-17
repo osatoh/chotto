@@ -417,7 +417,13 @@ export default function App() {
               <span
                 className={`checkbox${task.done ? " checkbox--checked" : ""}`}
                 onClick={() => toggle(task)}
-              />
+              >
+                {/* Drawn rather than a ✓ glyph: the stroke can be rounded,
+                    and it can be animated on its way in */}
+                <svg className="checkbox__tick" viewBox="0 0 16 16">
+                  <path d="M3.5 8.5 L6.6 11.5 L12.5 4.8" />
+                </svg>
+              </span>
               <input
                 ref={(input) => {
                   if (input) inputs.current.set(task.id, input);

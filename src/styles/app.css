@@ -1,3 +1,12 @@
+/* Bundled rather than fetched, so chotto still looks right offline.
+   MIT licensed; see assets/fonts/LICENSE.ComicShannsMono.md */
+@font-face {
+  font-family: "Comic Shanns Mono";
+  src: url("../assets/fonts/ComicShannsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -12,9 +21,9 @@ body,
 body {
   background: transparent;
   color: var(--text);
-  /* Rounded faces that ship with macOS, so nothing has to be downloaded:
-     SF Pro Rounded for Latin, Hiragino Maru Gothic for Japanese */
-  font-family: ui-rounded, "SF Pro Rounded", "Hiragino Maru Gothic ProN",
+  /* Comic Shanns Mono has no Japanese glyphs, so Japanese falls through to
+     the rounded face macOS ships; both read as hand drawn */
+  font-family: "Comic Shanns Mono", ui-rounded, "Hiragino Maru Gothic ProN",
     -apple-system, sans-serif;
   font-size: 14.5px;
   letter-spacing: 0.01em;

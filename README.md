@@ -76,3 +76,7 @@ The database lives in the app data directory as `chotto.db`; the schema is manag
 
 ## License
 MIT
+
+Bundled font: [Comic Shanns Mono](https://github.com/jesusmgg/comic-shanns-mono)
+by Shannon Miwa and Jesus Gonzalez, MIT licensed. The font file ships inside the
+app (`src/assets/fonts/`), so chotto never fetches it at runtime.

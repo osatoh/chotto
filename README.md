@@ -77,6 +77,10 @@ The database lives in the app data directory as `chotto.db`; the schema is manag
 ## License
 MIT
 
-Bundled font: [Comic Shanns Mono](https://github.com/jesusmgg/comic-shanns-mono)
-by Shannon Miwa and Jesus Gonzalez, MIT licensed. The font file ships inside the
-app (`src/assets/fonts/`), so chotto never fetches it at runtime.
+Bundled fonts, both shipped inside the app (`src/assets/fonts/`) so chotto never
+fetches them at runtime:
+
+- [Comic Shanns Mono](https://github.com/jesusmgg/comic-shanns-mono) by Shannon
+  Miwa and Jesus Gonzalez, MIT licensed — Latin
+- [Klee One](https://github.com/fontworks-fonts/Klee) by Fontworks, SIL Open
+  Font License 1.1 — Japanese

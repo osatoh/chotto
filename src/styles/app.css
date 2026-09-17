@@ -7,6 +7,14 @@
   font-display: block;
 }
 
+/* Klee One, for Japanese. SIL OFL 1.1; see assets/fonts/OFL.KleeOne.txt */
+@font-face {
+  font-family: "Klee One";
+  src: url("../assets/fonts/KleeOne-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: block;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -22,9 +30,9 @@ body {
   background: transparent;
   color: var(--text);
   /* Comic Shanns Mono has no Japanese glyphs, so Japanese falls through to
-     the rounded face macOS ships; both read as hand drawn */
-  font-family: "Comic Shanns Mono", ui-rounded, "Hiragino Maru Gothic ProN",
-    -apple-system, sans-serif;
+     Klee One; both read as hand drawn */
+  font-family: "Comic Shanns Mono", "Klee One", ui-rounded, -apple-system,
+    sans-serif;
   font-size: 14.5px;
   letter-spacing: 0.01em;
   -webkit-font-smoothing: antialiased;

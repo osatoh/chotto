@@ -54,6 +54,7 @@ pnpm install
 pnpm tauri dev                  # run the app
 pnpm build                      # typecheck + build the frontend
 cd src-tauri && cargo check     # check the Rust shell
+pnpm app:install                # build, replace /Applications/chotto.app, launch
 ```
 
 Where things live:

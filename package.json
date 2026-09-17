@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "app:install": "tauri build --bundles app && rm -rf /Applications/chotto.app && ditto src-tauri/target/release/bundle/macos/chotto.app /Applications/chotto.app && open /Applications/chotto.app"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

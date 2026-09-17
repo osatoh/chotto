@@ -54,6 +54,7 @@ pnpm install
 pnpm tauri dev                  # アプリを起動
 pnpm build                      # 型チェック + フロントエンドのビルド
 cd src-tauri && cargo check     # Rust 側のチェック
+pnpm app:install                # ビルドして /Applications に入れ直し、起動
 ```
 
 どこに何があるか:

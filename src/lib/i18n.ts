@@ -5,7 +5,6 @@ export type Locale = (typeof LOCALES)[number];
 type Messages = {
   inputPlaceholder: string;
   settings: string;
-  close: string;
   theme: string;
   language: string;
   pin: string;
@@ -20,7 +19,6 @@ const MESSAGES: Record<Locale, Messages> = {
   en: {
     inputPlaceholder: "Capture a task…",
     settings: "Settings",
-    close: "Done (Esc)",
     theme: "Theme",
     language: "Language",
     pin: "Keep on top",
@@ -46,7 +44,6 @@ const MESSAGES: Record<Locale, Messages> = {
   ja: {
     inputPlaceholder: "ちょっとメモ…",
     settings: "設定",
-    close: "閉じる (Esc)",
     theme: "テーマ",
     language: "言語",
     pin: "常に手前に表示",

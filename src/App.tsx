@@ -302,16 +302,7 @@ export default function App() {
     <div className="popup" data-tauri-drag-region>
       {settingsOpen ? (
         <div className="settings" data-tauri-drag-region>
-          <header className="settings__header">
-            <h1 className="settings__title">{t.settings}</h1>
-            <button
-              type="button"
-              className="settings__close"
-              onClick={() => setSettingsOpen(false)}
-            >
-              {t.close}
-            </button>
-          </header>
+          <h1 className="settings__title">{t.settings}</h1>
 
           <button
             type="button"

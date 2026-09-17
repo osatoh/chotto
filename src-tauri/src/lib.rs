@@ -28,10 +28,11 @@ fn toggle_popup(app: &tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let migrations = vec![Migration {
-        version: 1,
-        description: "create tasks table",
-        sql: "CREATE TABLE tasks (
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "create tasks table",
+            sql: "CREATE TABLE tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 done INTEGER NOT NULL DEFAULT 0,
@@ -41,8 +42,15 @@ pub fn run() {
                 created_at TEXT NOT NULL DEFAULT (datetime('now')),
                 updated_at TEXT NOT NULL DEFAULT (datetime('now'))
               );",
-        kind: MigrationKind::Up,
-    }];
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add indent to tasks",
+            sql: "ALTER TABLE tasks ADD COLUMN indent INTEGER NOT NULL DEFAULT 0;",
+            kind: MigrationKind::Up,
+        },
+    ];
 
     let mut builder = tauri::Builder::default();
 

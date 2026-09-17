@@ -23,12 +23,12 @@ A tiny, keyboard-first task app for macOS.
   - `↑↓` move, `Space`/`Enter` toggle check, `⌘↑↓` reorder
   - The last line is the input: type → `Enter` to add
   - `⌘K` command palette / theme switch, `⌘⌫` delete, `⌘,` settings
+- [x] Subtasks: `Tab` / `Shift+Tab` to indent
 - [x] UI language: English (default) / Japanese
 - [x] Themes: **flexoki-light (default)**, flexoki-dark, Dracula, Nord
 - [x] Local storage (SQLite)
 
 ## Future Ideas
-- [ ] Subtasks (`Tab` / `Shift+Tab` to indent)
 - [ ] Voice capture
 - [ ] Completed-task handling options (strike / sink / fade out)
 - [ ] Homebrew tap distribution (requires Apple Developer signing)
@@ -48,7 +48,7 @@ pnpm build        # typecheck + build the frontend
 ```
 
 Global shortcut: `⌘⇧Space` toggles the popup.
-In-app keys: `↑↓` select / `Enter` add or toggle / `⌘↑↓` reorder / `⌘⌫` delete / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
+In-app keys: `↑↓` select / `Enter` add or toggle / `⌘↑↓` reorder / `⌘⌫` delete / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Tab` `⇧Tab` indent / `Esc` hide.
 
 `⌘,` opens the settings panel, which is also where the full shortcut list lives.
 

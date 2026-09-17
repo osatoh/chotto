@@ -5,6 +5,8 @@ export type Task = {
   title: string;
   done: boolean;
   position: number;
+  /** Nesting depth; 0 is a top level task */
+  indent: number;
   due: string | null;
   tags: string | null;
 };
@@ -21,16 +23,23 @@ function db(): Promise<Database> {
 
 export async function listTasks(): Promise<Task[]> {
   const rows = await (await db()).select<TaskRow[]>(
-    "SELECT id, title, done, position, due, tags FROM tasks ORDER BY position ASC",
+    "SELECT id, title, done, position, indent, due, tags FROM tasks ORDER BY position ASC",
   );
   return rows.map((row) => ({ ...row, done: row.done === 1 }));
 }
 
-export async function addTask(title: string): Promise<void> {
+export async function addTask(title: string, indent: number): Promise<void> {
   // Append to the end; position is REAL so tasks can be inserted in between later
   await (await db()).execute(
-    "INSERT INTO tasks (title, position) VALUES ($1, COALESCE((SELECT MAX(position) FROM tasks), 0) + 1)",
-    [title],
+    "INSERT INTO tasks (title, position, indent) VALUES ($1, COALESCE((SELECT MAX(position) FROM tasks), 0) + 1, $2)",
+    [title, indent],
+  );
+}
+
+export async function setIndent(id: number, indent: number): Promise<void> {
+  await (await db()).execute(
+    "UPDATE tasks SET indent = $1, updated_at = datetime('now') WHERE id = $2",
+    [indent, id],
   );
 }
 

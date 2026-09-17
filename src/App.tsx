@@ -5,6 +5,7 @@ import {
   addTask,
   deleteTask,
   listTasks,
+  setIndent,
   swapPositions,
   toggleTask,
   type Task,
@@ -29,6 +30,11 @@ function loadTheme(): Theme {
   return THEMES.includes(saved as Theme) ? (saved as Theme) : "flexoki-light";
 }
 
+/** A line may sit at most one level deeper than the line above it */
+function maxIndent(previous: Task | undefined): number {
+  return previous ? previous.indent + 1 : 0;
+}
+
 function next<T>(values: readonly T[], current: T): T {
   return values[(values.indexOf(current) + 1) % values.length];
 }
@@ -42,6 +48,7 @@ export default function App() {
   const [locale, setLocale] = useState<Locale>(loadLocale);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [draftIndent, setDraftIndent] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const t = messages(locale);
 
@@ -121,10 +128,28 @@ export default function App() {
         return;
       }
 
+      case "Tab": {
+        // Tab indents the line being typed, or the selected task when idle
+        event.preventDefault();
+        const step = event.shiftKey ? -1 : 1;
+        if (draft) {
+          const limit = maxIndent(tasks[tasks.length - 1]);
+          setDraftIndent(Math.max(0, Math.min(draftIndent + step, limit)));
+        } else if (current) {
+          const limit = maxIndent(tasks[selected - 1]);
+          const indent = Math.max(0, Math.min(current.indent + step, limit));
+          if (indent !== current.indent) {
+            await setIndent(current.id, indent);
+            await reload();
+          }
+        }
+        return;
+      }
+
       case "Enter":
         event.preventDefault();
         if (draft.trim()) {
-          await addTask(draft.trim());
+          await addTask(draft.trim(), draftIndent);
           setDraft("");
           await reload();
         } else if (current) {
@@ -227,6 +252,7 @@ export default function App() {
             <li
               key={task.id}
               className={`task${index === selected ? " task--selected" : ""}`}
+              style={{ paddingLeft: `${16 + task.indent * 22}px` }}
               onClick={() => setSelected(index)}
             >
               <span
@@ -240,7 +266,10 @@ export default function App() {
           ))}
 
           {/* The last line is the input: a task starts as an empty checkbox */}
-          <li className="task task--draft">
+          <li
+            className="task task--draft"
+            style={{ paddingLeft: `${16 + draftIndent * 22}px` }}
+          >
             <span className="checkbox" />
             <input
               ref={inputRef}

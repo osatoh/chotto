@@ -1,0 +1,37 @@
+/* Themes are pure CSS variables, selected by data-theme on <html> */
+:root,
+[data-theme="flexoki-light"] {
+  --bg: #fffcf0;
+  --bg-elevated: #f2f0e5;
+  --border: #e6e4d9;
+  --text: #100f0f;
+  --text-muted: #6f6e69;
+  --accent: #205ea6;
+}
+
+[data-theme="flexoki-dark"] {
+  --bg: #100f0f;
+  --bg-elevated: #1c1b1a;
+  --border: #282726;
+  --text: #cecdc3;
+  --text-muted: #878580;
+  --accent: #4385be;
+}
+
+[data-theme="dracula"] {
+  --bg: #282a36;
+  --bg-elevated: #343746;
+  --border: #44475a;
+  --text: #f8f8f2;
+  --text-muted: #6272a4;
+  --accent: #bd93f9;
+}
+
+[data-theme="nord"] {
+  --bg: #2e3440;
+  --bg-elevated: #3b4252;
+  --border: #434c5e;
+  --text: #eceff4;
+  --text-muted: #7b88a1;
+  --accent: #88c0d0;
+}

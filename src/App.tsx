@@ -105,9 +105,12 @@ export default function App() {
       if (event.key === "Enter") {
         event.preventDefault();
         await commitEdit();
+        // Leaving the edit field focusless would strand the caret
+        inputRef.current?.focus();
       } else if (event.key === "Escape") {
         event.preventDefault();
         setEditing(null);
+        inputRef.current?.focus();
       }
       return;
     }

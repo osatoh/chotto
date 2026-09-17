@@ -25,6 +25,7 @@ A tiny, keyboard-first task app for macOS.
   - `⌘K` command palette / theme switch, `⌘⌫` delete, `⌘,` settings
 - [x] Subtasks: `Tab` / `Shift+Tab` to indent
 - [x] UI language: English (default) / Japanese
+- [x] Rebindable keys, including the global shortcut
 - [x] Themes: **flexoki-light (default)**, flexoki-dark, Dracula, Nord
 - [x] Local storage (SQLite)
 
@@ -52,7 +53,10 @@ In-app keys: `Enter` new line / `⌘Enter` check off / `↑↓` move between lin
 
 There is no separate input box: every line is an editable field, and chotto always keeps at least one line to type on.
 
-`⌘,` opens the settings panel, which is also where the full shortcut list lives.
+`⌘,` opens the settings panel, which is also where every key can be rebound:
+click a row, press the key you want, and it takes effect immediately. The
+bindings live in `localStorage` under `chotto.keymap`, and `⌘⇧Space` is rebound
+through the Rust side so the system hears the new one.
 
 UI language is English by default and can be switched to Japanese (`⌘L`, or the footer button); the choice is remembered. Strings live in `src/lib/i18n.ts`.
 

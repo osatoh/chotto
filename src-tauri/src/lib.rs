@@ -13,6 +13,55 @@ fn set_pinned(pinned: bool, state: State<'_, Pinned>, window: tauri::Window) -> 
     window.set_always_on_top(pinned).map_err(|e| e.to_string())
 }
 
+/// The shortcut currently registered with the system, so it can be replaced.
+#[cfg(desktop)]
+#[derive(Default)]
+struct ToggleShortcut(Mutex<Option<tauri_plugin_global_shortcut::Shortcut>>);
+
+/// The accelerator chotto listens on until the frontend says otherwise.
+#[cfg(desktop)]
+const DEFAULT_TOGGLE: &str = "Super+Shift+Space";
+
+/// Register `accelerator` as the show/hide shortcut, replacing the old one.
+#[cfg(desktop)]
+fn register_toggle(app: &tauri::AppHandle, accelerator: &str) -> Result<(), String> {
+    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+
+    let shortcut: Shortcut = accelerator
+        .parse()
+        .map_err(|_| format!("{accelerator} is not a shortcut this system understands"))?;
+    let manager = app.global_shortcut();
+    let state = app.state::<ToggleShortcut>();
+    let mut current = state.0.lock().map_err(|e| e.to_string())?;
+
+    // Unregister first: the old accelerator would otherwise stay claimed
+    if let Some(previous) = current.take() {
+        let _ = manager.unregister(previous);
+    }
+    manager
+        .on_shortcut(shortcut, move |app, _shortcut, event| {
+            if event.state() == ShortcutState::Pressed {
+                toggle_popup(app);
+            }
+        })
+        .map_err(|e| e.to_string())?;
+    *current = Some(shortcut);
+    Ok(())
+}
+
+#[cfg(desktop)]
+#[tauri::command]
+fn set_global_shortcut(accelerator: String, app: tauri::AppHandle) -> Result<(), String> {
+    register_toggle(&app, &accelerator)
+}
+
+/// Mobile has no global shortcuts; the command exists so the frontend is portable.
+#[cfg(not(desktop))]
+#[tauri::command]
+fn set_global_shortcut(_accelerator: String) -> Result<(), String> {
+    Ok(())
+}
+
 /// Toggle the popup between visible and hidden.
 fn toggle_popup(app: &tauri::AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
@@ -56,21 +105,9 @@ pub fn run() {
 
     #[cfg(desktop)]
     {
-        use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
-
-        // Global shortcut: ⌘⇧Space
-        let toggle_shortcut = Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Space);
-        builder = builder.plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_shortcut(toggle_shortcut)
-                .expect("failed to register global shortcut")
-                .with_handler(move |app, shortcut, event| {
-                    if event.state() == ShortcutState::Pressed && shortcut == &toggle_shortcut {
-                        toggle_popup(app);
-                    }
-                })
-                .build(),
-        );
+        builder = builder
+            .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+            .manage(ToggleShortcut::default());
     }
 
     builder
@@ -81,7 +118,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_opener::init())
         .manage(Pinned::default())
-        .invoke_handler(tauri::generate_handler![set_pinned])
+        .invoke_handler(tauri::generate_handler![set_pinned, set_global_shortcut])
         .on_window_event(|window, event| {
             // Hide on focus loss, unless pinned
             if let WindowEvent::Focused(false) = event {
@@ -100,6 +137,13 @@ pub fn run() {
             // Keep the app out of the Dock, like a menu bar app
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            // The frontend re-registers the saved accelerator once it loads;
+            // until then the default keeps chotto reachable
+            #[cfg(desktop)]
+            if let Err(cause) = register_toggle(app.handle(), DEFAULT_TOGGLE) {
+                eprintln!("could not register {DEFAULT_TOGGLE}: {cause}");
+            }
 
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();

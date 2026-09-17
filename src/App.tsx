@@ -12,6 +12,19 @@ import {
   type Task,
 } from "./lib/db";
 import {
+  ACTIONS,
+  DEFAULT_KEYMAP,
+  GLOBAL_ACTION,
+  actionFor,
+  chordOf,
+  formatChord,
+  loadKeymap,
+  saveKeymap,
+  toAccelerator,
+  type Action,
+  type Keymap,
+} from "./lib/keymap";
+import {
   LOCALES,
   loadLocale,
   messages,
@@ -54,6 +67,8 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingFocus, setPendingFocus] = useState<number | null>(null);
+  const [keymap, setKeymap] = useState<Keymap>(loadKeymap);
+  const [capturing, setCapturing] = useState<Action | null>(null);
   const inputs = useRef(new Map<number, HTMLInputElement>());
   const composing = useRef(false);
   const composedAt = useRef(0);
@@ -104,6 +119,14 @@ export default function App() {
     saveLocale(locale);
   }, [locale]);
 
+  // The Rust side starts on the default; hand it the saved binding once the
+  // webview is up, and again whenever it changes
+  useEffect(() => {
+    void invoke("set_global_shortcut", {
+      accelerator: toAccelerator(keymap[GLOBAL_ACTION]),
+    }).catch(report);
+  }, [keymap]);
+
   // Return to the line that was being typed every time the popup comes back
   useEffect(() => {
     const unlisten = getCurrentWindow().onFocusChanged(({ payload: shown }) => {
@@ -114,6 +137,24 @@ export default function App() {
       void unlisten.then((fn) => fn());
     };
   }, [focused, tasks, focusLine]);
+
+  const rebind = (action: Action, chord: string) => {
+    const taken = ACTIONS.find(
+      (other) => other !== action && keymap[other] === chord,
+    );
+    if (taken) {
+      setError(t.keyTaken);
+      return;
+    }
+    const updated = { ...keymap, [action]: chord };
+    setKeymap(updated);
+    saveKeymap(updated);
+  };
+
+  const resetKeys = () => {
+    setKeymap({ ...DEFAULT_KEYMAP });
+    saveKeymap({ ...DEFAULT_KEYMAP });
+  };
 
   const togglePin = async () => {
     const pin = !pinned;
@@ -159,10 +200,21 @@ export default function App() {
       return;
     }
 
-    const meta = event.metaKey;
+    const chord = chordOf(event);
+    if (!chord) return;
+
+    // While waiting for a key, every chord means "bind me" except the escape
+    if (capturing) {
+      event.preventDefault();
+      if (chord !== "Escape") rebind(capturing, chord);
+      setCapturing(null);
+      return;
+    }
+
+    const action = actionFor(keymap, chord);
 
     if (settingsOpen) {
-      if (event.key === "Escape" || (meta && event.key === ",")) {
+      if (action === "hide" || action === "settings") {
         event.preventDefault();
         setSettingsOpen(false);
       }
@@ -172,26 +224,34 @@ export default function App() {
     const index = tasks.findIndex((task) => task.id === focused);
     const current = tasks[index];
 
-    switch (event.key) {
-      case ",":
-        if (meta) {
-          event.preventDefault();
-          setSettingsOpen(true);
-        }
+    // ⌫ on an empty line is an editing rule rather than a binding: it has to
+    // read the caret, and on a line with text it must stay a plain backspace
+    if (
+      event.code === "Backspace" &&
+      !action &&
+      current &&
+      !current.title &&
+      (event.target as HTMLInputElement).selectionStart === 0
+    ) {
+      event.preventDefault();
+      await removeLine(index);
+      return;
+    }
+
+    switch (action) {
+      case "settings":
+        event.preventDefault();
+        setSettingsOpen(true);
         return;
 
-      case "Escape":
+      case "hide":
         event.preventDefault();
         await getCurrentWindow().hide();
         return;
 
-      case "Enter": {
+      case "newLine": {
         event.preventDefault();
         if (!current) return;
-        if (meta) {
-          toggle(current);
-          return;
-        }
         const id = await createTask(
           positionBetween(current, tasks[index + 1]),
           current.indent,
@@ -201,26 +261,26 @@ export default function App() {
         return;
       }
 
-      case "Backspace": {
-        if (!current) return;
-        // ⌘⌫ deletes outright; a bare ⌫ only collapses an empty line
-        const caretAtStart =
-          (event.target as HTMLInputElement).selectionStart === 0;
-        if (meta || (caretAtStart && !current.title)) {
-          event.preventDefault();
-          await removeLine(index);
-        }
+      case "toggleDone":
+        event.preventDefault();
+        if (current) toggle(current);
         return;
-      }
 
-      case "ArrowDown":
-      case "ArrowUp": {
+      case "removeLine":
+        event.preventDefault();
+        if (current) await removeLine(index);
+        return;
+
+      case "moveUp":
+      case "moveDown":
+      case "moveLineUp":
+      case "moveLineDown": {
         event.preventDefault();
         if (!current) return;
-        const step = event.key === "ArrowDown" ? 1 : -1;
+        const step = action === "moveDown" || action === "moveLineDown" ? 1 : -1;
         const target = Math.max(0, Math.min(index + step, tasks.length - 1));
         if (target === index) return;
-        if (meta) {
+        if (action === "moveLineUp" || action === "moveLineDown") {
           await swapPositions(current, tasks[target]);
           setTasks(await listTasks());
         }
@@ -228,13 +288,14 @@ export default function App() {
         return;
       }
 
-      case "Tab": {
+      case "indent":
+      case "outdent": {
         event.preventDefault();
         if (!current) return;
         const limit = maxIndent(tasks[index - 1]);
         const indent = Math.max(
           0,
-          Math.min(current.indent + (event.shiftKey ? -1 : 1), limit),
+          Math.min(current.indent + (action === "indent" ? 1 : -1), limit),
         );
         if (indent === current.indent) return;
         await setIndent(current.id, indent);
@@ -244,26 +305,20 @@ export default function App() {
         return;
       }
 
-      case "k":
-        if (meta) {
-          // ⌘K: cycles themes for now (command palette comes later)
-          event.preventDefault();
-          setTheme(next(THEMES, theme));
-        }
+      case "nextTheme":
+        // Cycling for now; a command palette comes later
+        event.preventDefault();
+        setTheme(next(THEMES, theme));
         return;
 
-      case "l":
-        if (meta) {
-          event.preventDefault();
-          setLocale(next(LOCALES, locale));
-        }
+      case "nextLanguage":
+        event.preventDefault();
+        setLocale(next(LOCALES, locale));
         return;
 
-      case "p":
-        if (meta) {
-          event.preventDefault();
-          await togglePin();
-        }
+      case "togglePin":
+        event.preventDefault();
+        await togglePin();
         return;
     }
   };
@@ -331,14 +386,25 @@ export default function App() {
             <span className="settings__value">{pinned ? t.on : t.off}</span>
           </button>
 
-          <dl className="shortcuts">
-            {t.shortcuts.map((shortcut) => (
-              <div className="shortcuts__row" key={shortcut.keys}>
-                <dt className="shortcuts__keys">{shortcut.keys}</dt>
-                <dd className="shortcuts__description">{shortcut.description}</dd>
-              </div>
-            ))}
-          </dl>
+          <h2 className="settings__title settings__title--section">{t.keys}</h2>
+          {ACTIONS.map((action) => (
+            <button
+              type="button"
+              key={action}
+              className="settings__row"
+              onClick={() => setCapturing(action)}
+            >
+              <span>{t.actions[action]}</span>
+              <span className="settings__value">
+                {capturing === action ? t.pressKey : formatChord(keymap[action])}
+              </span>
+            </button>
+          ))}
+
+          <p className="settings__note">{t.emptyLineHint}</p>
+          <button type="button" className="settings__reset" onClick={resetKeys}>
+            {t.resetKeys}
+          </button>
         </div>
       ) : (
         <ul className="list" data-tauri-drag-region>

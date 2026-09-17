@@ -125,26 +125,25 @@ body {
   color: var(--accent);
 }
 
-.shortcuts {
-  margin: 16px 0 0;
+.settings__title--section {
+  margin-top: 20px;
 }
 
-.shortcuts__row {
-  display: flex;
-  gap: 12px;
-  padding: 2px 0;
+.settings__note {
+  margin: 10px 0 0;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.shortcuts__keys {
-  flex: none;
-  width: 92px;
-  text-align: right;
-}
-
-.shortcuts__description {
-  margin: 0;
+.settings__reset {
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .error {

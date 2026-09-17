@@ -1,3 +1,5 @@
+import type { Action } from "./keymap";
+
 // UI strings. No i18n library: a typed dictionary is enough.
 export const LOCALES = ["en", "ja"] as const;
 export type Locale = (typeof LOCALES)[number];
@@ -11,8 +13,13 @@ type Messages = {
   on: string;
   off: string;
   localeLabel: string;
-  /** Keyboard shortcuts shown in the settings panel, in display order */
-  shortcuts: { keys: string; description: string }[];
+  keys: string;
+  pressKey: string;
+  keyTaken: string;
+  resetKeys: string;
+  emptyLineHint: string;
+  /** What each bindable action does, shown next to its key */
+  actions: Record<Action, string>;
 };
 
 const MESSAGES: Record<Locale, Messages> = {
@@ -25,21 +32,28 @@ const MESSAGES: Record<Locale, Messages> = {
     on: "On",
     off: "Off",
     localeLabel: "English",
-    shortcuts: [
-      { keys: "⌘⇧Space", description: "Show or hide chotto" },
-      { keys: "Enter", description: "Start a new line below" },
-      { keys: "⌘Enter", description: "Check the line off" },
-      { keys: "↑ ↓", description: "Move between lines" },
-      { keys: "⌘↑ ⌘↓", description: "Move the line itself" },
-      { keys: "⌫", description: "On an empty line, remove it" },
-      { keys: "⌘⌫", description: "Remove the line" },
-      { keys: "Tab ⇧Tab", description: "Indent or outdent" },
-      { keys: "⌘K", description: "Next theme" },
-      { keys: "⌘L", description: "Next language" },
-      { keys: "⌘P", description: "Keep on top" },
-      { keys: "⌘,", description: "Settings" },
-      { keys: "Esc", description: "Close settings, or hide chotto" },
-    ],
+    keys: "Keys",
+    pressKey: "Press a key…",
+    keyTaken: "That key is already taken",
+    resetKeys: "Reset keys",
+    emptyLineHint: "⌫ on an empty line removes it",
+    actions: {
+      toggleWindow: "Show or hide chotto",
+      newLine: "Start a new line below",
+      toggleDone: "Check the line off",
+      moveUp: "Move to the line above",
+      moveDown: "Move to the line below",
+      moveLineUp: "Move the line up",
+      moveLineDown: "Move the line down",
+      indent: "Indent",
+      outdent: "Outdent",
+      removeLine: "Remove the line",
+      nextTheme: "Next theme",
+      nextLanguage: "Next language",
+      togglePin: "Keep on top",
+      settings: "Settings",
+      hide: "Hide",
+    },
   },
   ja: {
     inputPlaceholder: "ちょっとメモ…",
@@ -50,21 +64,28 @@ const MESSAGES: Record<Locale, Messages> = {
     on: "オン",
     off: "オフ",
     localeLabel: "日本語",
-    shortcuts: [
-      { keys: "⌘⇧Space", description: "chotto の表示 / 非表示" },
-      { keys: "Enter", description: "下に新しい行" },
-      { keys: "⌘Enter", description: "チェックを切り替え" },
-      { keys: "↑ ↓", description: "行を移動" },
-      { keys: "⌘↑ ⌘↓", description: "行そのものを並び替え" },
-      { keys: "⌫", description: "空行なら、その行を削除" },
-      { keys: "⌘⌫", description: "行を削除" },
-      { keys: "Tab ⇧Tab", description: "インデントを下げる / 上げる" },
-      { keys: "⌘K", description: "次のテーマ" },
-      { keys: "⌘L", description: "次の言語" },
-      { keys: "⌘P", description: "常に手前に表示" },
-      { keys: "⌘,", description: "設定" },
-      { keys: "Esc", description: "設定を閉じる / chotto を隠す" },
-    ],
+    keys: "キー",
+    pressKey: "キーを押してください…",
+    keyTaken: "そのキーは既に使われています",
+    resetKeys: "キーを初期値に戻す",
+    emptyLineHint: "空行での ⌫ はその行を削除します",
+    actions: {
+      toggleWindow: "chotto の表示 / 非表示",
+      newLine: "下に新しい行",
+      toggleDone: "チェックを切り替え",
+      moveUp: "上の行へ移動",
+      moveDown: "下の行へ移動",
+      moveLineUp: "行を上へ移動",
+      moveLineDown: "行を下へ移動",
+      indent: "インデントを下げる",
+      outdent: "インデントを上げる",
+      removeLine: "行を削除",
+      nextTheme: "次のテーマ",
+      nextLanguage: "次の言語",
+      togglePin: "常に手前に表示",
+      settings: "設定",
+      hide: "隠す",
+    },
   },
 };
 

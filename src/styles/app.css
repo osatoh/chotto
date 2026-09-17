@@ -150,3 +150,11 @@ body {
 .shortcuts__description {
   margin: 0;
 }
+
+.error {
+  margin: 0;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 12px;
+}

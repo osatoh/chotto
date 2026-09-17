@@ -41,6 +41,7 @@ export default function App() {
   const [pinned, setPinned] = useState(false);
   const [locale, setLocale] = useState<Locale>(loadLocale);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const t = messages(locale);
 
@@ -49,7 +50,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void reload();
+    void reload().catch((cause) => setError(String(cause)));
   }, [reload]);
 
   useEffect(() => {
@@ -81,7 +82,10 @@ export default function App() {
     await invoke("set_pinned", { pinned: pin });
   };
 
-  const handleKeyDown = async (event: React.KeyboardEvent) => {
+  const runKeyDown = async (event: React.KeyboardEvent) => {
+    // While the IME is composing, Enter confirms the conversion — not a task
+    if (event.nativeEvent.isComposing) return;
+
     const meta = event.metaKey;
     const current = tasks[selected];
 
@@ -162,9 +166,17 @@ export default function App() {
     }
   };
 
-  const toggleSelected = async (task: Task) => {
-    await toggleTask(task.id, !task.done);
-    await reload();
+  // Nothing else reports failures, so a swallowed rejection would look like
+  // a key that simply does nothing
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    setError(null);
+    void runKeyDown(event).catch((cause) => setError(String(cause)));
+  };
+
+  const toggleSelected = (task: Task) => {
+    void toggleTask(task.id, !task.done)
+      .then(reload)
+      .catch((cause) => setError(String(cause)));
   };
 
   return (
@@ -219,7 +231,7 @@ export default function App() {
             >
               <span
                 className={`checkbox${task.done ? " checkbox--checked" : ""}`}
-                onClick={() => void toggleSelected(task)}
+                onClick={() => toggleSelected(task)}
               />
               <span className={task.done ? "task__title--done" : undefined}>
                 {task.title}
@@ -241,6 +253,8 @@ export default function App() {
           </li>
         </ul>
       )}
+
+      {error && <p className="error">{error}</p>}
     </div>
   );
 }

@@ -64,6 +64,13 @@ export async function toggleTask(id: number, done: boolean): Promise<void> {
   );
 }
 
+export async function deleteTasks(ids: number[]): Promise<void> {
+  const conn = await db();
+  for (const id of ids) {
+    await conn.execute("DELETE FROM tasks WHERE id = $1", [id]);
+  }
+}
+
 export async function deleteTask(id: number): Promise<void> {
   await (await db()).execute("DELETE FROM tasks WHERE id = $1", [id]);
 }

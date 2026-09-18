@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import {
   createTask,
   deleteTask,
+  deleteTasks,
   listTasks,
   renameTask,
   reorder,
@@ -243,6 +244,39 @@ export default function App() {
     focusLine(block[0].id);
   };
 
+  /**
+   * Drop every checked line. An unchecked child of a checked line survives:
+   * losing a task nobody ticked off would be the one unrecoverable mistake
+   * here. It is pulled up to a depth that still has a parent.
+   */
+  const clearDone = async () => {
+    const doomed = tasks.filter((task) => task.done);
+    if (doomed.length === 0) return;
+
+    await deleteTasks(doomed.map((task) => task.id));
+    const left = tasks.filter((task) => !task.done);
+
+    // Keep a line to type on
+    if (left.length === 0) {
+      const id = await createTask(1, 0);
+      setTasks(await listTasks());
+      focusLine(id);
+      return;
+    }
+
+    await reorder(left.map((task) => task.id));
+    for (const [at, task] of left.entries()) {
+      const limit = maxIndent(left[at - 1]);
+      if (task.indent > limit) {
+        left[at] = { ...task, indent: limit };
+        await setIndent(task.id, limit);
+      }
+    }
+
+    setTasks(await listTasks());
+    focusLine(left[0].id);
+  };
+
   const runKeyDown = async (event: KeyboardEvent) => {
     // While the IME is composing, Enter confirms the conversion — not a line.
     // keyCode 229 and the composing ref cover WKWebView, where compositionend
@@ -323,6 +357,11 @@ export default function App() {
       case "removeLine":
         event.preventDefault();
         if (current) await removeLine(index);
+        return;
+
+      case "clearDone":
+        event.preventDefault();
+        await clearDone();
         return;
 
       case "moveUp":

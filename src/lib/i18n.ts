@@ -40,6 +40,7 @@ const MESSAGES: Record<Locale, Messages> = {
     actions: {
       toggleWindow: "Show or hide chotto",
       newLine: "Start a new line below",
+      newLineAbove: "Start a new line above",
       toggleDone: "Check the line off",
       moveUp: "Move to the line above",
       moveDown: "Move to the line below",
@@ -73,6 +74,7 @@ const MESSAGES: Record<Locale, Messages> = {
     actions: {
       toggleWindow: "chotto の表示 / 非表示",
       newLine: "下に新しい行",
+      newLineAbove: "上に新しい行",
       toggleDone: "チェックを切り替え",
       moveUp: "上の行へ移動",
       moveDown: "下の行へ移動",

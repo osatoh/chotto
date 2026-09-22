@@ -8,6 +8,7 @@
 export const ACTIONS = [
   "toggleWindow",
   "newLine",
+  "newLineAbove",
   "toggleDone",
   "moveUp",
   "moveDown",
@@ -34,6 +35,7 @@ export type Keymap = Record<Action, string>;
 export const DEFAULT_KEYMAP: Keymap = {
   toggleWindow: "Super+Shift+Space",
   newLine: "Enter",
+  newLineAbove: "Shift+Enter",
   toggleDone: "Super+Enter",
   moveUp: "ArrowUp",
   moveDown: "ArrowDown",

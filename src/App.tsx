@@ -349,6 +349,20 @@ export default function App() {
         return;
       }
 
+      case "newLineAbove": {
+        event.preventDefault();
+        if (!current) return;
+        const above = tasks[index - 1];
+        const id = await createTask(
+          above ? (above.position + current.position) / 2 : current.position - 1,
+          // A line at the very top has no parent to sit under
+          Math.min(current.indent, maxIndent(above)),
+        );
+        setTasks(await listTasks());
+        focusLine(id);
+        return;
+      }
+
       case "toggleDone":
         event.preventDefault();
         if (current) toggle(current);

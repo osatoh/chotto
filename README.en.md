@@ -22,7 +22,7 @@ A tiny, keyboard-first task app for macOS.
 - [ ] Instant capture: select text anywhere → shortcut → becomes a task
 - [ ] AI parsing: extract title / due / tags from captured text
 - [x] Full keyboard operation
-  - Every line is an editable field: `Enter` starts a new line below
+  - Every line is an editable field: `Enter` opens a line below, `⇧Enter` above
   - `↑↓` move between lines, `⌘Enter` checks off, `⌘↑↓` moves the line with its children
   - `⌘⌫` removes a line, `⌘K` switches theme, `⌘,` opens settings
 - [x] Subtasks: `Tab` / `Shift+Tab` to indent
@@ -66,7 +66,7 @@ Where things live:
 - `src-tauri/src/lib.rs` — window behaviour, global shortcut, migrations
 
 Global shortcut: `⌘⇧Space` toggles the popup.
-In-app keys: `Enter` new line / `⌘Enter` check off / `↑↓` move between lines / `⌘↑↓` move the line with its children / `⌫` remove an empty line / `⌘⌫` remove the line / `Tab` `⇧Tab` indent / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
+In-app keys: `Enter` new line below / `⇧Enter` new line above / `⌘Enter` check off / `↑↓` move between lines / `⌘↑↓` move the line with its children / `⌫` remove an empty line / `⌘⌫` remove the line / `Tab` `⇧Tab` indent / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
 
 There is no separate input box: every line is an editable field, and chotto always keeps at least one line to type on.
 

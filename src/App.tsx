@@ -3,7 +3,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import {
   createTask,
-  deleteTask,
   deleteTasks,
   listTasks,
   renameTask,
@@ -186,17 +185,39 @@ export default function App() {
     void toggleTask(task.id, !task.done).catch(report);
   };
 
-  /** Remove a line, keeping the last one as an empty line to type on */
-  const removeLine = async (index: number) => {
-    const task = tasks[index];
-    if (tasks.length === 1) {
-      changeTitle(task, "");
+  /**
+   * Persist a list that has had lines taken out of it: renumber, and pull up
+   * any line left deeper than the line above it can parent.
+   */
+  const settle = async (left: Task[]) => {
+    await reorder(left.map((task) => task.id));
+    for (const [at, task] of left.entries()) {
+      const limit = maxIndent(left[at - 1]);
+      if (task.indent > limit) {
+        left[at] = { ...task, indent: limit };
+        await setIndent(task.id, limit);
+      }
+    }
+    setTasks(await listTasks());
+  };
+
+  /**
+   * Remove a line, with everything indented under it when `withChildren`.
+   * The last line is emptied rather than removed, so there is always
+   * somewhere to type.
+   */
+  const removeLine = async (index: number, withChildren: boolean) => {
+    const doomed = withChildren ? blockOf(tasks, index) : [tasks[index]];
+    const left = tasks.filter((task) => !doomed.includes(task));
+
+    if (left.length === 0) {
+      changeTitle(tasks[index], "");
       return;
     }
-    await deleteTask(task.id);
-    const neighbour = tasks[index - 1] ?? tasks[index + 1];
-    setTasks(tasks.filter((_, at) => at !== index));
-    focusLine(neighbour.id);
+
+    await deleteTasks(doomed.map((task) => task.id));
+    await settle(left);
+    focusLine(left[Math.max(0, Math.min(index - 1, left.length - 1))].id);
   };
 
   /** Move a line and its children past the neighbouring line and its children */
@@ -264,16 +285,7 @@ export default function App() {
       return;
     }
 
-    await reorder(left.map((task) => task.id));
-    for (const [at, task] of left.entries()) {
-      const limit = maxIndent(left[at - 1]);
-      if (task.indent > limit) {
-        left[at] = { ...task, indent: limit };
-        await setIndent(task.id, limit);
-      }
-    }
-
-    setTasks(await listTasks());
+    await settle(left);
     focusLine(left[0].id);
   };
 
@@ -322,7 +334,7 @@ export default function App() {
       (event.target as HTMLInputElement).selectionStart === 0
     ) {
       event.preventDefault();
-      await removeLine(index);
+      await removeLine(index, false);
       return;
     }
 
@@ -370,7 +382,7 @@ export default function App() {
 
       case "removeLine":
         event.preventDefault();
-        if (current) await removeLine(index);
+        if (current) await removeLine(index, true);
         return;
 
       case "clearDone":

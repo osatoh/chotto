@@ -71,10 +71,6 @@ export async function deleteTasks(ids: number[]): Promise<void> {
   }
 }
 
-export async function deleteTask(id: number): Promise<void> {
-  await (await db()).execute("DELETE FROM tasks WHERE id = $1", [id]);
-}
-
 /**
  * Write a whole new order. Moving a task moves everything indented under it,
  * so the two ends of the list can change at once; renumbering all of them is

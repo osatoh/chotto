@@ -200,3 +200,11 @@ body {
   color: var(--accent);
   font-size: 12px;
 }
+
+/* How many lines a folded line is holding */
+.task__folded {
+  flex: none;
+  padding-left: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}

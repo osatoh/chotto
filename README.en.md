@@ -26,6 +26,7 @@ A tiny, keyboard-first task app for macOS.
   - `↑↓` move between lines, `⌘Enter` checks off, `⌘↑↓` moves the line with its children
   - `⌘⌫` removes a line and its children, `⌘K` switches theme, `⌘,` opens settings
 - [x] Subtasks: `Tab` / `Shift+Tab` to indent
+- [x] Folding: `⌘←` / `⌘→` on a line, `⌘⇧←` / `⌘⇧→` for the whole list; a folded line shows how many lines it holds as `(n)`
 - [x] UI language: English (default) / Japanese
 - [x] Rebindable keys, including the global shortcut
 - [x] Themes: **flexoki-light (default)**, flexoki-dark, Dracula, Nord
@@ -66,7 +67,7 @@ Where things live:
 - `src-tauri/src/lib.rs` — window behaviour, global shortcut, migrations
 
 Global shortcut: `⌘⇧Space` toggles the popup.
-In-app keys: `Enter` new line below / `⇧Enter` new line above / `⌘Enter` check off / `↑↓` move between lines / `⌘↑↓` move the line with its children / `⌫` remove an empty line / `⌘⌫` remove the line and its children / `Tab` `⇧Tab` indent / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
+In-app keys: `Enter` new line below / `⇧Enter` new line above / `⌘Enter` check off / `↑↓` move between lines / `⌘↑↓` move the line with its children / `⌫` remove an empty line / `⌘⌫` remove the line and its children / `Tab` `⇧Tab` indent / `⌘←` `⌘→` fold / `⌘K` theme / `⌘L` language / `⌘P` pin / `⌘,` settings / `Esc` hide.
 
 There is no separate input box: every line is an editable field, and chotto always keeps at least one line to type on.
 

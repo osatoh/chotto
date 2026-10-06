@@ -6,6 +6,7 @@ import {
   deleteTasks,
   listTasks,
   renameTask,
+  setCollapsed,
   reorder,
   setIndent,
   toggleTask,
@@ -60,6 +61,20 @@ function blockOf(tasks: Task[], index: number): Task[] {
     end += 1;
   }
   return tasks.slice(index, end + 1);
+}
+
+/** The lines on screen: what is under a folded line is not among them */
+function visibleTasks(tasks: Task[]): Task[] {
+  const visible: Task[] = [];
+  let hiddenUnder: number | null = null;
+
+  for (const task of tasks) {
+    if (hiddenUnder !== null && task.indent > hiddenUnder) continue;
+    hiddenUnder = null;
+    visible.push(task);
+    if (task.collapsed) hiddenUnder = task.indent;
+  }
+  return visible;
 }
 
 /** Position for a line inserted between two others; REAL leaves room forever */
@@ -163,6 +178,43 @@ export default function App() {
   const resetKeys = () => {
     setKeymap({ ...DEFAULT_KEYMAP });
     saveKeymap({ ...DEFAULT_KEYMAP });
+  };
+
+  const visible = visibleTasks(tasks);
+
+  /** Fold or unfold one line; a line with nothing under it cannot fold */
+  const fold = async (index: number, collapsed: boolean) => {
+    const task = tasks[index];
+    if (!task || blockOf(tasks, index).length === 1) return;
+    if (task.collapsed === collapsed) return;
+    await setCollapsed([task.id], collapsed);
+    setTasks((all) =>
+      all.map((one) => (one.id === task.id ? { ...one, collapsed } : one)),
+    );
+  };
+
+  const foldAll = async (collapsed: boolean) => {
+    const parents = tasks.filter((_, at) => blockOf(tasks, at).length > 1);
+    if (parents.length === 0) return;
+
+    await setCollapsed(
+      parents.map((task) => task.id),
+      collapsed,
+    );
+    const updated = await listTasks();
+    setTasks(updated);
+
+    // Folding can hide the line the caret was on; move it to the line that
+    // now stands for it, which is the nearest one still on screen above
+    const still = visibleTasks(updated);
+    if (focused === null || still.some((task) => task.id === focused)) return;
+    const was = updated.findIndex((task) => task.id === focused);
+    for (let at = was; at >= 0; at -= 1) {
+      if (still.some((task) => task.id === updated[at].id)) {
+        focusLine(updated[at].id);
+        return;
+      }
+    }
   };
 
   const togglePin = async () => {
@@ -352,8 +404,12 @@ export default function App() {
       case "newLine": {
         event.preventDefault();
         if (!current) return;
+        // A folded line keeps its children; the new line goes after them,
+        // where it will actually be visible
+        const block = blockOf(tasks, index);
+        const last = block[block.length - 1];
         const id = await createTask(
-          positionBetween(current, tasks[index + 1]),
+          positionBetween(last, tasks[index + block.length]),
           current.indent,
         );
         setTasks(await listTasks());
@@ -394,11 +450,33 @@ export default function App() {
       case "moveDown": {
         event.preventDefault();
         if (!current) return;
+        // Move through what is on screen, not through what is folded away
+        const at = visible.findIndex((task) => task.id === current.id);
         const step = action === "moveDown" ? 1 : -1;
-        const target = Math.max(0, Math.min(index + step, tasks.length - 1));
-        if (target !== index) focusLine(tasks[target].id);
+        const target = Math.max(0, Math.min(at + step, visible.length - 1));
+        if (target !== at) focusLine(visible[target].id);
         return;
       }
+
+      case "fold":
+        event.preventDefault();
+        await fold(index, true);
+        return;
+
+      case "unfold":
+        event.preventDefault();
+        await fold(index, false);
+        return;
+
+      case "foldAll":
+        event.preventDefault();
+        await foldAll(true);
+        return;
+
+      case "unfoldAll":
+        event.preventDefault();
+        await foldAll(false);
+        return;
 
       case "moveLineUp":
       case "moveLineDown":
@@ -527,7 +605,7 @@ export default function App() {
         </div>
       ) : (
         <ul className="list" data-tauri-drag-region>
-          {tasks.map((task) => (
+          {visible.map((task) => (
             <li
               key={task.id}
               className={`task${task.id === focused ? " task--focused" : ""}`}
@@ -554,6 +632,11 @@ export default function App() {
                 onChange={(event) => changeTitle(task, event.target.value)}
                 onFocus={() => setFocused(task.id)}
               />
+              {task.collapsed && (
+                <span className="task__folded">
+                  ({blockOf(tasks, tasks.indexOf(task)).length - 1})
+                </span>
+              )}
             </li>
           ))}
         </ul>

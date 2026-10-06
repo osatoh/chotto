@@ -103,6 +103,12 @@ pub fn run() {
             sql: "ALTER TABLE tasks ADD COLUMN indent INTEGER NOT NULL DEFAULT 0;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "add collapsed to tasks",
+            sql: "ALTER TABLE tasks ADD COLUMN collapsed INTEGER NOT NULL DEFAULT 0;",
+            kind: MigrationKind::Up,
+        },
     ];
 
     let mut builder = tauri::Builder::default();

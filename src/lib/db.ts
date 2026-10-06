@@ -7,12 +7,17 @@ export type Task = {
   position: number;
   /** Nesting depth; 0 is a top level task */
   indent: number;
+  /** Whether the lines indented under this one are hidden */
+  collapsed: boolean;
   due: string | null;
   tags: string | null;
 };
 
-/** Row shape as stored in SQLite (done is 0/1) */
-type TaskRow = Omit<Task, "done"> & { done: number };
+/** Row shape as stored in SQLite (done and collapsed are 0/1) */
+type TaskRow = Omit<Task, "done" | "collapsed"> & {
+  done: number;
+  collapsed: number;
+};
 
 let dbPromise: Promise<Database> | null = null;
 
@@ -23,9 +28,13 @@ function db(): Promise<Database> {
 
 export async function listTasks(): Promise<Task[]> {
   const rows = await (await db()).select<TaskRow[]>(
-    "SELECT id, title, done, position, indent, due, tags FROM tasks ORDER BY position ASC",
+    "SELECT id, title, done, position, indent, collapsed, due, tags FROM tasks ORDER BY position ASC",
   );
-  return rows.map((row) => ({ ...row, done: row.done === 1 }));
+  return rows.map((row) => ({
+    ...row,
+    done: row.done === 1,
+    collapsed: row.collapsed === 1,
+  }));
 }
 
 /**
@@ -48,6 +57,19 @@ export async function setIndent(id: number, indent: number): Promise<void> {
     "UPDATE tasks SET indent = $1, updated_at = datetime('now') WHERE id = $2",
     [indent, id],
   );
+}
+
+export async function setCollapsed(
+  ids: number[],
+  collapsed: boolean,
+): Promise<void> {
+  const conn = await db();
+  for (const id of ids) {
+    await conn.execute("UPDATE tasks SET collapsed = $1 WHERE id = $2", [
+      collapsed ? 1 : 0,
+      id,
+    ]);
+  }
 }
 
 export async function renameTask(id: number, title: string): Promise<void> {

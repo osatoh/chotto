@@ -114,6 +114,9 @@ export default function App() {
     if (!input) return;
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
+    // Focus alone does not always bring the line back into view when it has
+    // moved past the edge of the list, so scroll to it outright
+    input.scrollIntoView({ block: "nearest" });
     setPendingFocus(null);
   }, [pendingFocus, tasks]);
 
